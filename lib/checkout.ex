@@ -5,25 +5,25 @@ defmodule Checkout do
   @moduledoc """
 
   """
-  def calculate_total(products, basket, bonuses) do
+  def calculate_total(basket) do
     basket
     |> Enum.reduce(%{}, fn x, acc -> Map.update(acc, x, 1, &(&1 + 1)) end)
-    |> calculate_line_items(products, bonuses)
+    |> calculate_line_items()
   end
 
-  defp calculate_line_items(items, products, bonuses) do
+  defp calculate_line_items(items) do
     Map.keys(items)
     |> Enum.map(fn
       code ->
-        product = Product.get(products, code)
+        product = Product.get(code)
         qty = items[code]
-        calculate_line_item(product, bonuses, qty)
+        calculate_line_item(product, qty)
     end)
     |> Enum.reduce(&(&1 + &2))
   end
 
-  defp calculate_line_item(product, bonuses, qty) do
-    Bonus.calculate(bonuses, product, qty)
+  defp calculate_line_item(product, qty) do
+    Bonus.calculate(product, qty)
   end
 
   def show(basket, total) do

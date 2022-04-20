@@ -10,10 +10,7 @@ defmodule Product do
     %Product{code: code, name: name, price: price}
   end
 
-  def get(product_list, product_code) do
-    case Enum.filter(product_list, fn product -> product.code == product_code end) do
-      [product] -> product
-      _ -> nil
-    end
+  def get(code) do
+    Product.Server.get(code)
   end
 end

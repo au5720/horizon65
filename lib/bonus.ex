@@ -2,19 +2,21 @@ defmodule Bonus do
   @enforce_keys [:code, :bonus]
   defstruct [:code, :bonus]
 
+  def load(data) do
+    data
+    |> Enum.map(fn %{code: code, bonus: bonus} ->
+      %Bonus{code: code, bonus: bonus}
+    end)
+  end
+
   @doc """
   Bonus
     :two_for_one - Buy One get one free - for Orders over 1 - only applies once.
     :three_or_more - Get a 5% discount on order greater than or equal to 3
   """
 
-  def calculate(bonuses, product, qty) do
-    bonus =
-      case Enum.filter(bonuses, fn bonus -> bonus.code == product.code end) do
-        [%{bonus: bonus_atom}] -> bonus_atom
-        _ -> nil
-      end
-
+  def calculate(product, qty) do
+    bonus = Bonus.Server.get(product.code)
     apply_bonus(bonus, qty, product.price)
   end
 
@@ -34,12 +36,5 @@ defmodule Bonus do
 
   def apply_bonus(_default, product_qty, price) do
     product_qty * price
-  end
-
-  def load(data) do
-    data
-    |> Enum.map(fn %{code: code, bonus: bonus} ->
-      %Bonus{code: code, bonus: bonus}
-    end)
   end
 end
