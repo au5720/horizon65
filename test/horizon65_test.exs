@@ -1,52 +1,101 @@
 defmodule Horizon65Test do
   use ExUnit.Case
-  doctest Horizon65
-  doctest Bonus
 
-
-  test "Calculate total" do
-    testData = [%{code: "VOUCHER", name: "Voucher", price: 500, bonus: :two_for_one},
-                %{code: "TSHIRT", name: "T-Shirt", price: 2000, bonus: :three_or_more},
-                %{ code: "MUG", name: "Coffee Mug", price: 750} ]
-
-    products = Product.load_products(testData)
-    #Test 1
-    basket=["VOUCHER","TSHIRT", "VOUCHER"]
-    assert Checkout.calculate_total(products, basket) == 2500
-
-    #Test 2
-    basket=["TSHIRT", "TSHIRT", "TSHIRT", "VOUCHER", "TSHIRT"]
-    assert Checkout.calculate_total(products, basket) == 8100
-
-    #Test 3
-    basket=["VOUCHER", "TSHIRT", "VOUCHER", "VOUCHER", "MUG", "TSHIRT", "TSHIRT"]
-    assert Checkout.calculate_total(products, basket) == 7450
+  setup_all do
+    {:ok, test_data: test_data()}
   end
 
-  test "Product Tests" do
-    testData = [%{code: "VOUCHER", name: "Voucher", price: 500, bonus: :two_for_one},
-                %{code: "TSHIRT", name: "T-Shirt", price: 2000, bonus: :three_or_more},
-                %{ code: "MUG", name: "Coffee Mug", price: 750} ]
+  test "Calculate total", state do
+    [products, bonus_table] = state[:test_data]
 
-    products = Product.load_products(testData)
-    
+    # Test 1
+    basket =
+      []
+      |> Checkout.scan("VOUCHER")
+      |> Checkout.scan("TSHIRT")
+      |> Checkout.scan("VOUCHER")
+
+    assert Checkout.calculate_total(products, basket, bonus_table) == 2500
+
+    # Test 2
+    basket =
+      []
+      |> Checkout.scan("TSHIRT")
+      |> Checkout.scan("TSHIRT")
+      |> Checkout.scan("TSHIRT")
+      |> Checkout.scan("VOUCHER")
+      |> Checkout.scan("TSHIRT")
+
+    assert Checkout.calculate_total(products, basket, bonus_table) == 8100
+
+    # Test 3
+    basket =
+      []
+      |> Checkout.scan("VOUCHER")
+      |> Checkout.scan("TSHIRT")
+      |> Checkout.scan("VOUCHER")
+      |> Checkout.scan("VOUCHER")
+      |> Checkout.scan("MUG")
+      |> Checkout.scan("TSHIRT")
+      |> Checkout.scan("TSHIRT")
+
+    assert Checkout.calculate_total(products, basket, bonus_table) == 7450
+  end
+
+  test "Product Tests", state do
+    [products, _bonus_table] = state[:test_data]
+
     # Validate our test Data is loaded
     assert length(products) == 3
 
     # Check we can retrieve a product
-    aProduct = Product.get_product("VOUCHER", products)
-    assert aProduct.bonus == :two_for_one 
-
-    # Check that we return nil if not found
-    aProduct = Product.get_product("TV", products)
-    assert aProduct == nil 
-
-    # Check we can add a new Product
-    a_new_product = Product.new_product(%{code: "TV", name: "Flatscreen TV", price: 1250 })
-    new_products = Product.add_product(products, a_new_product)
-    the_new_product = Product.get_product("TV", new_products)
-    assert the_new_product.price == 1250
-
+    aProduct = products |> Product.get("VOUCHER")
+    assert aProduct.code == "VOUCHER"
   end
 
+  test "Bonus Calculations" do
+    assert Bonus.apply_bonus(:two_for_one, 2, 570) == 570
+
+    assert Bonus.apply_bonus(:two_for_one, 10, 500) == 4500
+
+    assert Bonus.apply_bonus(:three_or_more, 2, 570) == 1140
+
+    assert Bonus.apply_bonus(:three_or_more, 10, 500) == 4750
+  end
+
+  test "Show Checkout Details", state do
+    [products, bonus_table] = state[:test_data]
+
+    ans = """
+    Items: VOUCHER, TSHIRT, MUG
+    Total: 32.50€
+    """
+
+    basket =
+      []
+      |> Checkout.scan("VOUCHER")
+      |> Checkout.scan("TSHIRT")
+      |> Checkout.scan("MUG")
+
+    total = Checkout.calculate_total(products, basket, bonus_table)
+    result = Checkout.show(basket, total)
+    assert ans === result
+  end
+
+  def test_data() do
+    product_data = [
+      %{code: "VOUCHER", name: "Voucher", price: 500},
+      %{code: "TSHIRT", name: "T-Shirt", price: 2000},
+      %{code: "MUG", name: "Coffee Mug", price: 750}
+    ]
+
+    bonus_data = [
+      %{code: "VOUCHER", bonus: :two_for_one},
+      %{code: "TSHIRT", bonus: :three_or_more}
+    ]
+
+    products = Product.load(product_data)
+    bonus_table = Bonus.load(bonus_data)
+    [products, bonus_table]
+  end
 end
