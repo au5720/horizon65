@@ -6,6 +6,7 @@ defmodule Bonus.Server do
     GenServer.start_link(__MODULE__, opts, name: @name)
   end
 
+  # CLIENT API
   def load(data) do
     GenServer.call(@name, {:load, data})
   end
@@ -14,12 +15,9 @@ defmodule Bonus.Server do
     GenServer.call(@name, {:get, code})
   end
 
-  def stop() do
-    GenServer.call(@name, :stop)
-  end
-
+  # GENSERVER MESSAGES
   def init(_opts) do
-    {:ok, 0}
+    {:ok, []}
   end
 
   def handle_call({:get, code}, _from, state) do
@@ -35,14 +33,5 @@ defmodule Bonus.Server do
   def handle_call({:load, data}, _from, _state) do
     state = data
     {:reply, :ok, state}
-  end
-
-  def handle_call(:stop, _from, status) do
-    {:stop, :normal, status}
-  end
-
-  def terminate(reason, _status) do
-    IO.puts("Asked to stop because #{inspect(reason)}")
-    :ok
   end
 end
